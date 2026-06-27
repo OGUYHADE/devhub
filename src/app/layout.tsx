@@ -13,8 +13,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DevHub",
-  description: "個人開発者向け交流プラットフォーム",
+  title: {
+    default: "DevHub - 個人開発者の進捗共有コミュニティ",
+    template: "%s | DevHub",
+  },
+  description:
+    "個人開発者向けの進捗シェアプラットフォーム。毎日の開発記録をコミュニティで共有しよう。",
+  openGraph: {
+    title: "DevHub - 個人開発者の進捗共有コミュニティ",
+    description:
+      "個人開発者向けの進捗シェアプラットフォーム。毎日の開発記録をコミュニティで共有しよう。",
+    type: "website",
+    locale: "ja_JP",
+    siteName: "DevHub",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DevHub - 個人開発者の進捗共有コミュニティ",
+    description:
+      "個人開発者向けの進捗シェアプラットフォーム。毎日の開発記録をコミュニティで共有しよう。",
+  },
 };
 
 export default function RootLayout({
@@ -24,7 +42,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="ja"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>

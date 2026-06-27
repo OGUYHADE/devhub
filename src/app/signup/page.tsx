@@ -2,7 +2,13 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 
-export default function SignupPage() {
+export const metadata = { title: '新規登録' }
+
+export default function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
   async function signup(formData: FormData) {
     'use server'
     const supabase = await createClient()
@@ -18,42 +24,70 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow p-8">
-        <h1 className="text-2xl font-bold mb-6 text-center">DevHub 新規登録</h1>
-        <form action={signup} className="flex flex-col gap-4">
-          <input
-            type="text"
-            name="display_name"
-            placeholder="表示名"
-            required
-            className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="メールアドレス"
-            required
-            className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="パスワード（8文字以上）"
-            minLength={8}
-            required
-            className="border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <button
-            type="submit"
-            className="bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 transition"
-          >
-            登録する
-          </button>
-        </form>
-        <p className="mt-4 text-center text-sm text-gray-500">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-flex items-center gap-2 mb-6">
+            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center shadow-sm shadow-indigo-500/40">
+              <span className="text-white font-black text-sm">{'</>'}</span>
+            </div>
+            <span className="text-xl font-black text-slate-800 tracking-tight">DevHub</span>
+          </Link>
+          <h1 className="text-2xl font-black text-slate-800">アカウントを作成</h1>
+          <p className="text-sm text-slate-500 mt-1">無料で始められます</p>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
+          <form action={signup} className="flex flex-col gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                表示名
+              </label>
+              <input
+                type="text"
+                name="display_name"
+                placeholder="オグヤデ"
+                required
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 placeholder:text-slate-400 transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                メールアドレス
+              </label>
+              <input
+                type="email"
+                name="email"
+                placeholder="your@email.com"
+                required
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 placeholder:text-slate-400 transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                パスワード
+              </label>
+              <input
+                type="password"
+                name="password"
+                placeholder="8文字以上"
+                minLength={8}
+                required
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 placeholder:text-slate-400 transition"
+              />
+            </div>
+            <button
+              type="submit"
+              className="bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-indigo-700 transition shadow-sm shadow-indigo-600/30 mt-1"
+            >
+              登録する
+            </button>
+          </form>
+        </div>
+
+        <p className="mt-4 text-center text-sm text-slate-500">
           すでにアカウントをお持ちの方は{' '}
-          <Link href="/login" className="text-indigo-600 hover:underline">
+          <Link href="/login" className="text-indigo-600 hover:underline font-medium">
             ログイン
           </Link>
         </p>

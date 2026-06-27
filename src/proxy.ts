@@ -25,17 +25,19 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // セッションをリフレッシュ（重要：削除しないこと）
   const { data: { user } } = await supabase.auth.getUser()
-
   const { pathname } = request.nextUrl
 
-  // 未認証ユーザーを /login にリダイレクト
-  if (!user && pathname !== '/login' && pathname !== '/signup') {
-    return NextResponse.redirect(new URL('/login', request.url))
+  const isPublic =
+    pathname === '/' ||
+    pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname.startsWith('/reset-password')
+
+  if (!user && !isPublic) {
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // 認証済みユーザーが /login や /signup にアクセスしたらフィードへ
   if (user && (pathname === '/login' || pathname === '/signup')) {
     return NextResponse.redirect(new URL('/', request.url))
   }
