@@ -3,13 +3,16 @@ import { createClient } from '@/lib/supabase/server'
 import { signOut } from './actions'
 import PostForm from './ui/PostForm'
 import PostCard, { type Post } from './ui/PostCard'
-import { CATEGORIES, CATEGORY_STYLE, type Category } from '@/lib/categories'
+import { CATEGORIES, type Category } from '@/lib/categories'
 
-function buildUrl(sort?: string, category?: string) {
-  const params = new URLSearchParams()
-  if (sort) params.set('sort', sort)
-  if (category) params.set('category', category)
-  const qs = params.toString()
+const FEED_LIMIT = 20
+
+function buildUrl(params: { sort?: string; category?: string; page?: number }) {
+  const p = new URLSearchParams()
+  if (params.sort) p.set('sort', params.sort)
+  if (params.category) p.set('category', params.category)
+  if (params.page && params.page > 1) p.set('page', String(params.page))
+  const qs = p.toString()
   return qs ? `/?${qs}` : '/'
 }
 
@@ -80,26 +83,11 @@ function LandingPage() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            {
-              icon: '📊',
-              title: '進捗を可視化',
-              desc: 'プロジェクトの進捗をバーで表現。毎日の積み重ねが一目でわかる。',
-            },
-            {
-              icon: '👊',
-              title: 'リスペクトで応援',
-              desc: '仲間の頑張りを👊で応援しよう。あなたのリスペクトが誰かのモチベーションになる。',
-            },
-            {
-              icon: '🏷️',
-              title: 'カテゴリで整理',
-              desc: 'Web / アプリ / ゲーム / AI/ML。自分のジャンルで投稿を整理・発見できる。',
-            },
+            { icon: '📊', title: '進捗を可視化', desc: 'プロジェクトの進捗をバーで表現。毎日の積み重ねが一目でわかる。' },
+            { icon: '👊', title: 'リスペクトで応援', desc: '仲間の頑張りを👊で応援しよう。あなたのリスペクトが誰かのモチベーションになる。' },
+            { icon: '🏷️', title: 'カテゴリで整理', desc: 'Web / アプリ / ゲーム / AI/ML。自分のジャンルで投稿を整理・発見できる。' },
           ].map((f) => (
-            <div
-              key={f.title}
-              className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center hover:shadow-md transition-shadow"
-            >
+            <div key={f.title} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center hover:shadow-md transition-shadow">
               <div className="text-4xl mb-4">{f.icon}</div>
               <h3 className="text-lg font-bold text-slate-800 mb-2">{f.title}</h3>
               <p className="text-sm text-slate-500 leading-relaxed">{f.desc}</p>
@@ -112,13 +100,8 @@ function LandingPage() {
       <div className="bg-slate-900 py-20 px-4">
         <div className="max-w-xl mx-auto text-center">
           <h2 className="text-3xl font-black text-white mb-4">今日から始めよう</h2>
-          <p className="text-slate-400 text-base mb-8">
-            アカウント登録は無料。30秒でスタートできる。
-          </p>
-          <Link
-            href="/signup"
-            className="inline-block bg-indigo-600 text-white px-10 py-4 rounded-2xl text-lg font-bold hover:bg-indigo-500 transition shadow-xl shadow-indigo-500/30"
-          >
+          <p className="text-slate-400 text-base mb-8">アカウント登録は無料。30秒でスタートできる。</p>
+          <Link href="/signup" className="inline-block bg-indigo-600 text-white px-10 py-4 rounded-2xl text-lg font-bold hover:bg-indigo-500 transition shadow-xl shadow-indigo-500/30">
             無料で始める →
           </Link>
         </div>
@@ -141,28 +124,37 @@ function LandingPage() {
 export default async function FeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; sort?: string }>
+  searchParams: Promise<{ category?: string; sort?: string; page?: string }>
 }) {
-  const { category: activeCategory, sort } = await searchParams
+  const { category: activeCategory, sort, page: pageStr } = await searchParams
+  const page = Math.max(1, Number(pageStr ?? 1))
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return <LandingPage />
 
+  // For respect/trend sorts we skip pagination and sort in JS
+  const usePagination = !sort || sort === 'new'
+  const offset = usePagination ? (page - 1) * FEED_LIMIT : 0
+
   let query = supabase
     .from('posts')
     .select('id, content, author_name, user_id, created_at, progress, category, respects(count)')
-    .limit(50)
 
-  if (activeCategory) {
-    query = query.eq('category', activeCategory)
-  }
+  if (activeCategory) query = query.eq('category', activeCategory)
   if (sort === 'trend') {
     const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
     query = query.gte('created_at', since)
   }
 
   query = query.order('created_at', { ascending: false })
+
+  if (usePagination) {
+    query = query.range(offset, offset + FEED_LIMIT - 1)
+  } else {
+    query = query.limit(50)
+  }
 
   const [{ data: rawPosts }, { data: myRespects }] = await Promise.all([
     query,
@@ -178,6 +170,7 @@ export default async function FeedPage({
 
   const respectedPostIds = new Set((myRespects ?? []).map((r) => r.post_id))
   const displayName = user.user_metadata?.display_name ?? user.email ?? ''
+  const hasMore = usePagination && posts.length === FEED_LIMIT
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -192,6 +185,15 @@ export default async function FeedPage({
           </Link>
           <div className="flex items-center gap-1">
             <Link
+              href="/search"
+              className="text-slate-400 hover:text-white transition p-1.5 rounded-lg hover:bg-slate-800"
+              aria-label="検索"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+              </svg>
+            </Link>
+            <Link
               href="/profile"
               className="flex items-center gap-2 text-slate-300 hover:text-white transition px-2 py-1.5 rounded-lg hover:bg-slate-800"
             >
@@ -201,10 +203,7 @@ export default async function FeedPage({
               <span className="text-sm hidden sm:block">{displayName}</span>
             </Link>
             <form action={signOut}>
-              <button
-                type="submit"
-                className="text-xs text-slate-400 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-slate-800"
-              >
+              <button type="submit" className="text-xs text-slate-400 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-slate-800">
                 ログアウト
               </button>
             </form>
@@ -214,11 +213,9 @@ export default async function FeedPage({
         {/* Category filter */}
         <div className="max-w-2xl mx-auto px-4 pb-2.5 flex gap-1.5 overflow-x-auto scrollbar-hide">
           <Link
-            href={buildUrl(sort, undefined)}
+            href={buildUrl({ sort, category: undefined })}
             className={`shrink-0 text-xs px-3 py-1.5 rounded-full transition font-medium
-              ${!activeCategory
-                ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/50'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+              ${!activeCategory ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
           >
             すべて
           </Link>
@@ -227,11 +224,9 @@ export default async function FeedPage({
             return (
               <Link
                 key={cat}
-                href={active ? buildUrl(sort, undefined) : buildUrl(sort, cat)}
+                href={active ? buildUrl({ sort, category: undefined }) : buildUrl({ sort, category: cat })}
                 className={`shrink-0 text-xs px-3 py-1.5 rounded-full transition font-medium
-                  ${active
-                    ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/50'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  ${active ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
               >
                 {cat}
               </Link>
@@ -252,11 +247,9 @@ export default async function FeedPage({
             return (
               <Link
                 key={label}
-                href={buildUrl(key, activeCategory)}
+                href={buildUrl({ sort: key, category: activeCategory })}
                 className={`text-xs px-3 py-1 rounded-full transition font-medium
-                  ${active
-                    ? 'bg-slate-700 text-white'
-                    : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
+                  ${active ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
               >
                 {label}
               </Link>
@@ -266,17 +259,41 @@ export default async function FeedPage({
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-        <PostForm />
+        {page === 1 && <PostForm />}
 
         {posts.length > 0 ? (
-          posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              respected={respectedPostIds.has(post.id)}
-              currentUserId={user.id}
-            />
-          ))
+          <>
+            {posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                respected={respectedPostIds.has(post.id)}
+                currentUserId={user.id}
+              />
+            ))}
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between pt-2">
+              {page > 1 ? (
+                <Link
+                  href={buildUrl({ sort, category: activeCategory, page: page - 1 })}
+                  className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition"
+                >
+                  ← 前へ
+                </Link>
+              ) : (
+                <div />
+              )}
+              {hasMore && (
+                <Link
+                  href={buildUrl({ sort, category: activeCategory, page: page + 1 })}
+                  className="text-sm text-slate-600 hover:text-slate-800 px-6 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition font-medium"
+                >
+                  もっと見る →
+                </Link>
+              )}
+            </div>
+          </>
         ) : (
           <div className="text-center text-slate-400 text-sm py-16 bg-white rounded-2xl border border-slate-100">
             {activeCategory

@@ -113,3 +113,21 @@ export async function requestPasswordReset(formData: FormData) {
   }
   redirect('/reset-password?sent=true')
 }
+
+export async function updateProfile(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const display_name = (formData.get('display_name') as string).trim()
+  const bio = (formData.get('bio') as string).trim()
+  const github_url = (formData.get('github_url') as string).trim()
+  const twitter_url = (formData.get('twitter_url') as string).trim()
+
+  const { error } = await supabase.auth.updateUser({
+    data: { display_name, bio, github_url, twitter_url },
+  })
+
+  if (error) throw error
+  revalidatePath('/profile')
+}

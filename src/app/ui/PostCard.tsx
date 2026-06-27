@@ -137,7 +137,17 @@ export default function PostCard({
         {/* Footer row */}
         {mode === 'view' && (
           <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-            <RespectButton postId={post.id} initialCount={respectCount} initialRespected={respected} />
+            <div className="flex items-center gap-0.5">
+              <RespectButton postId={post.id} initialCount={respectCount} initialRespected={respected} />
+              <a
+                href={`https://x.com/intent/tweet?text=${encodeURIComponent(`${post.content.slice(0, 120)}\n\n#DevHub`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-slate-400 hover:text-sky-500 px-2.5 py-1.5 rounded-lg hover:bg-sky-50 transition"
+              >
+                X
+              </a>
+            </div>
             {isOwn && (
               <div className="flex items-center gap-0.5">
                 <button

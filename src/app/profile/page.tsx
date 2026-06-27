@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { CATEGORY_STYLE, type Category } from '@/lib/categories'
+import ActivityGraph from '@/app/ui/ActivityGraph'
+import ProfileEditForm from '@/app/ui/ProfileEditForm'
 
 type Post = {
   id: string
@@ -20,12 +22,55 @@ function progressColor(value: number) {
   return '#f97316'
 }
 
+function calculateStreak(postDates: string[]): { current: number; max: number } {
+  if (!postDates.length) return { current: 0, max: 0 }
+
+  const unique = [...new Set(postDates)].sort()
+
+  let max = 1, run = 1
+  for (let i = 1; i < unique.length; i++) {
+    const diff = Math.round(
+      (new Date(unique[i]).getTime() - new Date(unique[i - 1]).getTime()) / 86400000
+    )
+    if (diff === 1) { run++; if (run > max) max = run }
+    else run = 1
+  }
+
+  const today = new Date().toISOString().slice(0, 10)
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+
+  if (!unique.includes(today) && !unique.includes(yesterday)) {
+    return { current: 0, max }
+  }
+
+  let check = unique.includes(today) ? today : yesterday
+  let current = 0
+  for (let i = unique.length - 1; i >= 0; i--) {
+    if (unique[i] === check) {
+      current++
+      const d = new Date(check)
+      d.setDate(d.getDate() - 1)
+      check = d.toISOString().slice(0, 10)
+    } else if (unique[i] < check) {
+      break
+    }
+  }
+
+  return { current, max }
+}
+
+export const metadata = { title: 'プロフィール' }
+
 export default async function ProfilePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const displayName = user.user_metadata?.display_name ?? user.email ?? 'ユーザー'
+  const meta = user.user_metadata ?? {}
+  const displayName = meta.display_name ?? user.email ?? 'ユーザー'
+  const bio: string = meta.bio ?? ''
+  const githubUrl: string = meta.github_url ?? ''
+  const twitterUrl: string = meta.twitter_url ?? ''
 
   const { data: posts } = await supabase
     .from('posts')
@@ -35,10 +80,14 @@ export default async function ProfilePage() {
 
   const safePosts: Post[] = posts ?? []
   const totalPosts = safePosts.length
-  const totalRespects = safePosts.reduce((sum, p) => sum + (p.respects?.[0]?.count ?? 0), 0)
+  const totalRespects = safePosts.reduce((s, p) => s + (p.respects?.[0]?.count ?? 0), 0)
+
+  const postDates = safePosts.map((p) => p.created_at.slice(0, 10))
+  const { current: streakCurrent, max: streakMax } = calculateStreak(postDates)
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Header */}
       <header className="bg-slate-900 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
@@ -58,13 +107,40 @@ export default async function ProfilePage() {
       </header>
 
       {/* Profile hero */}
-      <div className="bg-gradient-to-b from-slate-900 to-slate-800 pb-14 pt-10">
+      <div className="bg-gradient-to-b from-slate-900 to-slate-800 pt-10 pb-8">
         <div className="max-w-2xl mx-auto px-4 text-center">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-black text-3xl mx-auto mb-4 shadow-2xl shadow-indigo-500/40 ring-4 ring-slate-700">
             {displayName[0]?.toUpperCase() ?? '?'}
           </div>
-          <h1 className="text-2xl font-black text-white mb-8">{displayName}</h1>
+          <h1 className="text-2xl font-black text-white mb-1">{displayName}</h1>
+          {bio && (
+            <p className="text-slate-400 text-sm mb-3 max-w-md mx-auto leading-relaxed">{bio}</p>
+          )}
+          <div className="flex items-center justify-center gap-3 mb-6">
+            {githubUrl && (
+              <a
+                href={githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-slate-400 hover:text-white transition flex items-center gap-1"
+              >
+                <span>⌥</span>
+                <span>GitHub</span>
+              </a>
+            )}
+            {twitterUrl && (
+              <a
+                href={twitterUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-slate-400 hover:text-white transition"
+              >
+                X
+              </a>
+            )}
+          </div>
 
+          {/* Stats */}
           <div className="inline-flex gap-8 bg-slate-800/60 rounded-2xl px-8 py-4 border border-slate-700/50">
             <div className="text-center">
               <div className="text-2xl font-black text-white">{totalPosts}</div>
@@ -75,11 +151,39 @@ export default async function ProfilePage() {
               <div className="text-2xl font-black text-white">{totalRespects}</div>
               <div className="text-xs text-slate-400 mt-0.5">リスペクト</div>
             </div>
+            <div className="w-px bg-slate-700" />
+            <div className="text-center">
+              <div className="text-2xl font-black text-white flex items-center justify-center gap-1">
+                {streakCurrent}
+                <span className="text-base">🔥</span>
+              </div>
+              <div className="text-xs text-slate-400 mt-0.5">連続日数</div>
+            </div>
           </div>
         </div>
+
+        {/* Profile edit form (client component) */}
+        <ProfileEditForm
+          displayName={displayName}
+          bio={bio}
+          githubUrl={githubUrl}
+          twitterUrl={twitterUrl}
+        />
       </div>
 
-      <main className="max-w-2xl mx-auto px-4 -mt-6 pb-12 space-y-4">
+      <main className="max-w-2xl mx-auto px-4 -mt-4 pb-12 space-y-4">
+        {/* Activity graph */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-semibold text-slate-700">活動記録</p>
+            <p className="text-xs text-slate-400">
+              最長ストリーク: <span className="font-semibold text-slate-600">{streakMax}日</span>
+            </p>
+          </div>
+          <ActivityGraph postDates={postDates} />
+        </div>
+
+        {/* Posts */}
         {safePosts.length > 0 ? (
           safePosts.map((post) => {
             const respectCount = post.respects?.[0]?.count ?? 0
