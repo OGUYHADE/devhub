@@ -29,14 +29,14 @@ export default function RespectButton({ postId, initialCount, initialRespected }
   return (
     <button
       onClick={handleClick}
-      className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full transition
+      className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full transition-all duration-150
         ${optimistic.respected
-          ? 'bg-orange-100 text-orange-600 font-medium'
-          : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+          ? 'bg-orange-50 text-orange-600 font-semibold ring-1 ring-orange-200'
+          : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
         }`}
     >
       <span>👊</span>
-      <span>{optimistic.count}</span>
+      <span className="font-medium tabular-nums">{optimistic.count}</span>
     </button>
   )
 }

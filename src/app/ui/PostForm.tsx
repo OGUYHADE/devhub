@@ -4,14 +4,21 @@ import { useState } from 'react'
 import { createPost } from '@/app/actions'
 import { CATEGORIES, CATEGORY_STYLE, type Category } from '@/lib/categories'
 
+function progressColor(value: number) {
+  if (value === 100) return '#22c55e'
+  if (value >= 67) return '#6366f1'
+  if (value >= 34) return '#f59e0b'
+  return '#f97316'
+}
+
 export default function PostForm() {
   const [showProgress, setShowProgress] = useState(false)
   const [progress, setProgress] = useState(50)
   const [category, setCategory] = useState<Category | null>(null)
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-4">
-      <p className="text-sm font-medium text-gray-700 mb-2">今日の進捗を共有しよう</p>
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+      <p className="text-sm font-semibold text-slate-700 mb-3">今日の進捗を共有しよう</p>
       <form action={createPost} className="flex flex-col gap-3">
         <textarea
           name="content"
@@ -19,10 +26,9 @@ export default function PostForm() {
           placeholder="何を作った？何を学んだ？"
           required
           maxLength={500}
-          className="w-full border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50 placeholder:text-slate-400 transition"
         />
 
-        {/* カテゴリ選択 */}
         <div className="flex flex-wrap gap-1.5">
           {CATEGORIES.map((cat) => {
             const style = CATEGORY_STYLE[cat]
@@ -32,10 +38,10 @@ export default function PostForm() {
                 key={cat}
                 type="button"
                 onClick={() => setCategory(selected ? null : cat)}
-                className={`text-xs px-2.5 py-1 rounded-full border transition
+                className={`text-xs px-3 py-1 rounded-full border transition font-medium
                   ${selected
-                    ? `${style.bg} ${style.text} border-transparent font-medium`
-                    : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300'
+                    ? `${style.bg} ${style.text} border-transparent shadow-sm`
+                    : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-600'
                   }`}
               >
                 {cat}
@@ -45,20 +51,19 @@ export default function PostForm() {
         </div>
         <input type="hidden" name="category" value={category ?? ''} />
 
-        {/* 進捗バートグル */}
         <label className="flex items-center gap-2 cursor-pointer w-fit">
           <input
             type="checkbox"
             checked={showProgress}
             onChange={(e) => setShowProgress(e.target.checked)}
-            className="rounded"
+            className="rounded accent-indigo-500"
           />
-          <span className="text-xs text-gray-500">進捗バーを追加</span>
+          <span className="text-xs text-slate-500">進捗バーを追加</span>
         </label>
 
         {showProgress && (
-          <div className="space-y-2">
-            <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+          <div className="space-y-2 bg-slate-50 rounded-xl p-3 border border-slate-100">
+            <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
               <div
                 className="h-full rounded-full transition-all"
                 style={{ width: `${progress}%`, backgroundColor: progressColor(progress) }}
@@ -74,7 +79,9 @@ export default function PostForm() {
                 onChange={(e) => setProgress(Number(e.target.value))}
                 className="flex-1 accent-indigo-500"
               />
-              <span className="text-sm font-medium w-10 text-right">{progress}%</span>
+              <span className="text-sm font-bold w-10 text-right" style={{ color: progressColor(progress) }}>
+                {progress}%
+              </span>
             </div>
           </div>
         )}
@@ -83,7 +90,7 @@ export default function PostForm() {
         <div className="flex justify-end">
           <button
             type="submit"
-            className="bg-indigo-600 text-white text-sm font-medium px-5 py-1.5 rounded-lg hover:bg-indigo-700 transition"
+            className="bg-indigo-600 text-white text-sm font-semibold px-6 py-2 rounded-xl hover:bg-indigo-700 active:bg-indigo-800 transition shadow-sm shadow-indigo-600/30"
           >
             投稿する
           </button>
@@ -91,11 +98,4 @@ export default function PostForm() {
       </form>
     </div>
   )
-}
-
-function progressColor(value: number) {
-  if (value === 100) return '#22c55e'
-  if (value >= 67)  return '#6366f1'
-  if (value >= 34)  return '#f59e0b'
-  return '#f97316'
 }
