@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import RespectButton from './RespectButton'
@@ -46,6 +47,7 @@ export default function PostCard({
   currentUserId: string
   initialReactions?: ReactionData[]
 }) {
+  const router = useRouter()
   const [mode, setMode] = useState<'view' | 'edit' | 'deleting' | 'quoting'>('view')
   const [menuOpen, setMenuOpen] = useState(false)
   const [displayContent, setDisplayContent] = useState(post.content)
@@ -96,7 +98,10 @@ export default function PostCard({
   }
 
   function handleDelete(formData: FormData) {
-    startTransition(() => deletePost(formData))
+    startTransition(async () => {
+      await deletePost(formData)
+      router.refresh()
+    })
   }
 
   function handlePin() {
