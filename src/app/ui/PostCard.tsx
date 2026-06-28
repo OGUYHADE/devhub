@@ -48,6 +48,7 @@ export default function PostCard({
   initialReactions?: ReactionData[]
 }) {
   const router = useRouter()
+  const [deleted, setDeleted] = useState(false)
   const [mode, setMode] = useState<'view' | 'edit' | 'deleting' | 'quoting'>('view')
   const [menuOpen, setMenuOpen] = useState(false)
   const [displayContent, setDisplayContent] = useState(post.content)
@@ -88,6 +89,9 @@ export default function PostCard({
     }
   }, [post.id])
 
+  // All hooks must run before this early return to satisfy the Rules of Hooks
+  if (deleted) return null
+
   function handleUpdate(formData: FormData) {
     const newContent = formData.get('content') as string
     setDisplayContent(newContent)
@@ -99,8 +103,13 @@ export default function PostCard({
 
   function handleDelete(formData: FormData) {
     startTransition(async () => {
-      await deletePost(formData)
-      router.refresh()
+      try {
+        await deletePost(formData)
+        setDeleted(true)
+        router.refresh()
+      } catch {
+        toast.error('削除に失敗しました')
+      }
     })
   }
 
