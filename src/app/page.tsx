@@ -19,6 +19,91 @@ function buildUrl(params: { sort?: string; category?: string }) {
   return qs ? `/?${qs}` : '/'
 }
 
+const MOCK_POSTS = [
+  {
+    name: 'たろう',
+    handle: 'taro_dev',
+    time: '2分前',
+    content: 'ポートフォリオサイトをNext.jsで作り直し中。ダークモード対応がやっと完了した！🎨 次はアニメーション周り。',
+    category: 'Web開発',
+    progress: 70,
+    reactions: [{ emoji: '🔥', count: 12 }, { emoji: '👍', count: 8 }],
+    color: 'from-violet-500 to-purple-600',
+  },
+  {
+    name: 'みさき',
+    handle: 'misaki',
+    time: '1時間前',
+    content: '個人開発のSaaS、ついに初課金が入った…！半年間コツコツ作ってきてよかった。泣きそう😭 #個人開発',
+    category: '個人開発',
+    progress: 100,
+    reactions: [{ emoji: '🎉', count: 24 }, { emoji: '🔥', count: 15 }],
+    color: 'from-pink-500 to-rose-600',
+  },
+  {
+    name: 'けん',
+    handle: 'ken_codes',
+    time: '3時間前',
+    content: 'Rustの所有権でまた詰まってる…。借用チェッカーと格闘する毎日。でも楽しい。誰か助けて〜',
+    category: '学習',
+    progress: 30,
+    reactions: [{ emoji: '💡', count: 6 }, { emoji: '👍', count: 4 }],
+    color: 'from-cyan-500 to-blue-600',
+  },
+]
+
+function progressColorLanding(value: number) {
+  if (value === 100) return '#10b981'
+  if (value >= 67) return '#7c3aed'
+  if (value >= 34) return '#06b6d4'
+  return '#ec4899'
+}
+
+function MockPostCard({ post }: { post: (typeof MOCK_POSTS)[number] }) {
+  return (
+    <div className="card-glow bg-gradient-to-br from-dark-surface to-dark-elevated rounded-2xl border border-dark-border/60 p-5 text-left">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${post.color} flex items-center justify-center text-white font-bold shadow-sm shrink-0`}>
+            {post.name[0]}
+          </div>
+          <div className="min-w-0">
+            <p className="font-bold text-white text-base truncate">{post.name}</p>
+            <div className="flex items-center gap-2 text-slate-500">
+              <span className="font-mono text-sm">@{post.handle}</span>
+              <span className="text-slate-700">·</span>
+              <span className="text-xs text-slate-600">{post.time}</span>
+            </div>
+          </div>
+        </div>
+        <span className="text-xs px-2.5 py-0.5 rounded-full font-medium bg-accent-purple/20 text-accent-purple-light border border-accent-purple/30 shrink-0">
+          # {post.category}
+        </span>
+      </div>
+      <p className="text-[15px] text-slate-200 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+      <div className="mt-3 space-y-1.5">
+        <div className="flex justify-between items-center">
+          <span className="text-xs font-medium text-slate-500">進捗</span>
+          <span className="text-xs font-bold font-mono" style={{ color: progressColorLanding(post.progress) }}>
+            {post.progress}%{post.progress === 100 && ' 🎉'}
+          </span>
+        </div>
+        <div className="h-2 rounded-full bg-dark-border overflow-hidden">
+          <div className="h-full rounded-full" style={{ width: `${post.progress}%`, backgroundColor: progressColorLanding(post.progress) }} />
+        </div>
+      </div>
+      <div className="flex items-center gap-2 pt-3 mt-3 border-t border-dark-border/50">
+        {post.reactions.map((r) => (
+          <span key={r.emoji} className="flex items-center gap-1 text-xs bg-dark-elevated border border-dark-border rounded-full px-2.5 py-1 text-slate-300">
+            <span>{r.emoji}</span>
+            <span className="font-mono tabular-nums">{r.count}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function LandingPage() {
   return (
     <div className="min-h-screen bg-dark-bg text-slate-100">
@@ -39,6 +124,7 @@ function LandingPage() {
         </div>
       </header>
 
+      {/* Hero */}
       <div className="relative overflow-hidden py-28 px-4">
         <div className="absolute inset-0 grid-overlay opacity-30" />
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-accent-purple/20 rounded-full blur-[120px]" />
@@ -48,35 +134,36 @@ function LandingPage() {
             個人開発者のためのコミュニティ
           </div>
           <h1 className="text-5xl sm:text-6xl font-black tracking-tight mb-6 leading-tight">
-            個人開発の進捗を、<br />
+            作ってるものを、<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-purple-light via-accent-purple to-accent-cyan">
-              シェアしよう。
+              見せ合おう。
             </span>
           </h1>
           <p className="text-lg text-slate-400 mb-10 leading-relaxed max-w-xl mx-auto">
-            今日作ったもの、学んだこと、詰まったこと。<br />
-            毎日のアウトプットが、あなたの成長を証明する。
+            毎日の進捗・作品・悩みをシェアして、<br className="hidden sm:block" />
+            同じ熱量の開発者とつながるコミュニティ
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/signup"
               className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 py-3.5 rounded-full text-base font-bold hover:glow-purple transition active:scale-95">
               無料で始める →
             </Link>
-            <Link href="/login"
-              className="bg-dark-elevated text-slate-300 px-8 py-3.5 rounded-full text-base font-semibold hover:bg-dark-hover transition border border-dark-border active:scale-95">
-              ログインする
-            </Link>
+            <a href="#preview"
+              className="bg-transparent text-slate-300 px-8 py-3.5 rounded-full text-base font-semibold hover:bg-dark-hover transition border border-dark-border active:scale-95">
+              どんな場所か見る↓
+            </a>
           </div>
         </div>
       </div>
 
+      {/* Features */}
       <div className="max-w-5xl mx-auto px-4 py-20">
         <h2 className="text-3xl font-black text-center mb-14">開発者のための、開発者による</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[
-            { icon: '📊', title: '進捗を可視化', desc: 'プロジェクトの進捗をバーで表現。毎日の積み重ねが一目でわかる。' },
-            { icon: '🔥', title: 'リアクションで応援', desc: '仲間の頑張りに👍🔥💡で応援。あなたのリアクションが誰かのモチベーションに。' },
-            { icon: '🏷️', title: '技術スタックで整理', desc: 'React / Python / Rust。使った技術タグで投稿を整理・発見できる。' },
+            { icon: '🚀', title: '進捗シェア', desc: '今日作ったものを投稿して記録に残す。積み重ねが成長の証になる。' },
+            { icon: '🤝', title: 'つながる', desc: 'リスペクト・コメント・フォローで開発者同士が繋がる。' },
+            { icon: '🌳', title: 'みんなの広場', desc: 'アバターで集まるユニークなコミュニティスペース。' },
           ].map((f) => (
             <div key={f.title}
               className="card-glow bg-gradient-to-br from-dark-surface to-dark-elevated rounded-2xl border border-dark-border/60 p-8 text-center transition-all duration-200">
@@ -88,6 +175,22 @@ function LandingPage() {
         </div>
       </div>
 
+      {/* SNS-style preview */}
+      <div id="preview" className="scroll-mt-20 border-t border-dark-border/50 py-20 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-black mb-3">こんな投稿が毎日流れています</h2>
+            <p className="text-slate-400 text-base">進捗も、喜びも、つまずきも。リアルな開発の日々をのぞいてみよう。</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {MOCK_POSTS.map((post) => (
+              <MockPostCard key={post.handle} post={post} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Final CTA */}
       <div className="py-20 px-4 border-t border-dark-border/50">
         <div className="max-w-xl mx-auto text-center">
           <h2 className="text-3xl font-black mb-4">今日から始めよう</h2>
@@ -107,7 +210,7 @@ function LandingPage() {
           <div className="flex items-center gap-6 text-xs">
             <Link href="/terms" className="hover:text-slate-400 transition">利用規約</Link>
             <Link href="/privacy" className="hover:text-slate-400 transition">プライバシーポリシー</Link>
-            <span className="font-mono">© 2026 DevHub</span>
+            <span className="font-mono">© 2026 DevHub by ざりがにGAMES（@OGUYHADE）</span>
           </div>
         </div>
       </footer>

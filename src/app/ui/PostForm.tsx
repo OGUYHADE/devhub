@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { createPost } from '@/app/actions'
 import { CATEGORIES, type Category } from '@/lib/categories'
@@ -36,6 +37,7 @@ function CharCounter({ count }: { count: number }) {
 }
 
 export default function PostForm() {
+  const router = useRouter()
   const [content, setContent] = useState('')
   const [category, setCategory] = useState<Category | null>(null)
   const [isPublic, setIsPublic] = useState(true)
@@ -92,17 +94,22 @@ export default function PostForm() {
     const fd = new FormData(e.currentTarget)
     fd.set('tech_stack', JSON.stringify(techStack))
     startTransition(async () => {
-      await createPost(fd)
-      localStorage.removeItem(DRAFT_KEY)
-      setContent('')
-      setCategory(null)
-      setIsPublic(true)
-      setImagePreview(null)
-      setShowGithub(false)
-      setTechStack([])
-      setShowTechInput(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-      toast.success('投稿しました!')
+      try {
+        await createPost(fd)
+        localStorage.removeItem(DRAFT_KEY)
+        setContent('')
+        setCategory(null)
+        setIsPublic(true)
+        setImagePreview(null)
+        setShowGithub(false)
+        setTechStack([])
+        setShowTechInput(false)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+        router.refresh()
+        toast.success('投稿しました!')
+      } catch (err) {
+        toast.error('投稿に失敗しました: ' + (err instanceof Error ? err.message : String(err)))
+      }
     })
   }
 

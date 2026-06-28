@@ -7,23 +7,31 @@ import './globals.css'
 const inter = Inter({ variable: '--font-inter', subsets: ['latin'] })
 const jetbrainsMono = JetBrains_Mono({ variable: '--font-jetbrains', subsets: ['latin'] })
 
+const SITE_URL = 'https://devhub-three-rho.vercel.app'
+const SITE_TITLE = 'DevHub - 個人開発者の進捗共有コミュニティ'
+const SITE_DESCRIPTION = '毎日の開発進捗をシェアして、同じ熱量の開発者とつながろう。'
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'DevHub - 個人開発者の進捗共有コミュニティ',
+    default: SITE_TITLE,
     template: '%s | DevHub',
   },
-  description: '個人開発者向けの進捗シェアプラットフォーム。毎日の開発記録をコミュニティで共有しよう。',
+  description: SITE_DESCRIPTION,
   openGraph: {
-    title: 'DevHub - 個人開発者の進捗共有コミュニティ',
-    description: '個人開発者向けの進捗シェアプラットフォーム。毎日の開発記録をコミュニティで共有しよう。',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
     type: 'website',
     locale: 'ja_JP',
     siteName: 'DevHub',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'DevHub' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'DevHub - 個人開発者の進捗共有コミュニティ',
-    description: '個人開発者向けの進捗シェアプラットフォーム。毎日の開発記録をコミュニティで共有しよう。',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ['/og-image.png'],
   },
 }
 

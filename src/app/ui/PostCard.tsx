@@ -127,6 +127,13 @@ export default function PostCard({
     )
   }
 
+  function handleXShare() {
+    const text = `${displayContent.slice(0, 100)}\n\n#DevHub #個人開発`
+    const url = `${window.location.origin}/?post=${post.id}`
+    const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+    window.open(intent, '_blank', 'noopener,noreferrer')
+  }
+
   function handleQuoteSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!quoteContent.trim()) return
@@ -362,9 +369,20 @@ export default function PostCard({
             </svg>
           </button>
           <button
+            onClick={handleXShare}
+            title="Xでシェア"
+            aria-label="Xでシェア"
+            className="ml-auto text-slate-500 hover:text-white hover:bg-white/10 px-2.5 py-1.5 rounded-full transition-colors active:scale-95"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
+            </svg>
+          </button>
+          <button
             onClick={handleShare}
-            title="共有"
-            className="ml-auto text-slate-500 hover:text-accent-emerald hover:bg-accent-emerald/10 px-2.5 py-1.5 rounded-full transition-colors active:scale-95"
+            title="リンクをコピー"
+            aria-label="リンクをコピー"
+            className="text-slate-500 hover:text-accent-emerald hover:bg-accent-emerald/10 px-2.5 py-1.5 rounded-full transition-colors active:scale-95"
           >
             <ShareIcon size={15} />
           </button>

@@ -9,6 +9,47 @@ import type { Post, ReactionData, CommentWithExtras } from '@/lib/types'
 
 const FEED_LIMIT = 20
 
+// ── Notification helpers ─────────────────────────────────────────────────────
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>
+type NotifActor = { id: string; name: string }
+
+async function pushNotification(
+  supabase: SupabaseServer,
+  opts: { userId: string | null | undefined; actor: NotifActor; type: string; postId?: string | null }
+) {
+  if (!opts.userId || opts.userId === opts.actor.id) return
+  // Silently ignored if the notifications table doesn't exist
+  await supabase.from('notifications').insert({
+    user_id: opts.userId,
+    actor_id: opts.actor.id,
+    actor_name: opts.actor.name,
+    post_id: opts.postId ?? null,
+    type: opts.type,
+  })
+}
+
+function extractMentions(text: string): string[] {
+  const matches = text.match(/@([^\s@、。,.!?！？]{1,30})/g) ?? []
+  return [...new Set(matches.map((m) => m.slice(1)))]
+}
+
+async function notifyMentions(
+  supabase: SupabaseServer,
+  opts: { content: string; actor: NotifActor; postId?: string | null; exclude: Set<string> }
+) {
+  const names = extractMentions(opts.content)
+  if (names.length === 0) return
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, display_name')
+    .in('display_name', names)
+  for (const p of profiles ?? []) {
+    if (opts.exclude.has(p.id)) continue
+    await pushNotification(supabase, { userId: p.id, actor: opts.actor, type: 'mention', postId: opts.postId })
+    opts.exclude.add(p.id)
+  }
+}
+
 export async function createPost(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -260,13 +301,24 @@ export async function createComment(formData: FormData) {
   const content = (formData.get('content') as string).trim()
   if (!content) return
 
+  const actorName = user.user_metadata?.display_name ?? user.email ?? 'ユーザー'
   const { error } = await supabase.from('comments').insert({
     post_id: postId,
     user_id: user.id,
-    author_name: user.user_metadata?.display_name ?? user.email ?? 'ユーザー',
+    author_name: actorName,
     content,
   })
   if (error) throw error
+
+  // Notify the post owner, then anyone @mentioned (deduped)
+  const actor: NotifActor = { id: user.id, name: actorName }
+  const exclude = new Set<string>([user.id])
+  const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).maybeSingle()
+  if (post?.user_id) {
+    await pushNotification(supabase, { userId: post.user_id, actor, type: 'comment', postId })
+    exclude.add(post.user_id)
+  }
+  await notifyMentions(supabase, { content, actor, postId, exclude })
 }
 
 export async function deleteComment(formData: FormData) {
@@ -439,13 +491,24 @@ export async function createCommentReply(formData: FormData) {
   const content = (formData.get('content') as string).trim()
   if (!content) return
 
+  const actorName = user.user_metadata?.display_name ?? user.email ?? 'ユーザー'
   await supabase.from('comments').insert({
     post_id: postId,
     user_id: user.id,
-    author_name: user.user_metadata?.display_name ?? user.email ?? 'ユーザー',
+    author_name: actorName,
     content,
     parent_id: parentId,
   })
+
+  // Notify the parent comment's author, then anyone @mentioned (deduped)
+  const actor: NotifActor = { id: user.id, name: actorName }
+  const exclude = new Set<string>([user.id])
+  const { data: parent } = await supabase.from('comments').select('user_id').eq('id', parentId).maybeSingle()
+  if (parent?.user_id) {
+    await pushNotification(supabase, { userId: parent.user_id, actor, type: 'reply', postId })
+    exclude.add(parent.user_id)
+  }
+  await notifyMentions(supabase, { content, actor, postId, exclude })
 }
 
 export async function toggleCommentLike(commentId: string) {
@@ -647,10 +710,20 @@ export async function toggleFollow(targetUserId: string) {
     await supabase.from('follows').delete()
       .eq('follower_id', user.id)
       .eq('following_id', targetUserId)
+    // Remove the follow notification
+    await supabase.from('notifications').delete()
+      .eq('actor_id', user.id)
+      .eq('user_id', targetUserId)
+      .eq('type', 'follow')
   } else {
     await supabase.from('follows').insert({
       follower_id: user.id,
       following_id: targetUserId,
+    })
+    await pushNotification(supabase, {
+      userId: targetUserId,
+      actor: { id: user.id, name: user.user_metadata?.display_name ?? user.email ?? 'ユーザー' },
+      type: 'follow',
     })
   }
 
