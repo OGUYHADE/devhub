@@ -32,7 +32,9 @@ export async function proxy(request: NextRequest) {
     pathname === '/' ||
     pathname === '/login' ||
     pathname === '/signup' ||
-    pathname.startsWith('/reset-password')
+    pathname.startsWith('/reset-password') ||
+    pathname === '/terms' ||
+    pathname === '/privacy'
 
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL('/', request.url))

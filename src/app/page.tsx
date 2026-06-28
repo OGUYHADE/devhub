@@ -1,57 +1,55 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { signOut } from './actions'
 import PostForm from './ui/PostForm'
-import PostCard, { type Post } from './ui/PostCard'
-import { CATEGORIES, type Category } from '@/lib/categories'
+import RealtimeFeed from './ui/RealtimeFeed'
+import AnnouncementBanner from './ui/AnnouncementBanner'
+import InfiniteScrollFeed, { type PostWithReactions } from './ui/InfiniteScrollFeed'
+import AppShell from './ui/shell/AppShell'
+import EmptyState from './ui/EmptyState'
+import { CATEGORIES } from '@/lib/categories'
+import type { Post, ReactionData } from '@/lib/types'
 
 const FEED_LIMIT = 20
 
-function buildUrl(params: { sort?: string; category?: string; page?: number }) {
+function buildUrl(params: { sort?: string; category?: string }) {
   const p = new URLSearchParams()
   if (params.sort) p.set('sort', params.sort)
   if (params.category) p.set('category', params.category)
-  if (params.page && params.page > 1) p.set('page', String(params.page))
   const qs = p.toString()
   return qs ? `/?${qs}` : '/'
 }
 
-// ── Landing page for unauthenticated visitors ────────────────────────────────
 function LandingPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-slate-900">
+    <div className="min-h-screen bg-dark-bg text-slate-100">
+      <header className="border-b border-dark-border/50 bg-dark-surface/60 backdrop-blur-xl sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center shadow-sm shadow-indigo-500/40">
-              <span className="text-white font-black text-sm">{'</>'}</span>
-            </div>
-            <span className="text-xl font-black text-white tracking-tight">DevHub</span>
-          </div>
+          <span className="text-xl font-bold tracking-tight">
+            <span className="text-accent-purple">D</span>evHub
+          </span>
           <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm text-slate-300 hover:text-white transition">
+            <Link href="/login" className="text-sm text-slate-400 hover:text-white transition">
               ログイン
             </Link>
-            <Link
-              href="/signup"
-              className="text-sm bg-indigo-500 text-white px-4 py-2 rounded-xl hover:bg-indigo-400 transition font-semibold shadow-sm shadow-indigo-500/30"
-            >
+            <Link href="/signup"
+              className="text-sm bg-gradient-to-r from-violet-600 to-purple-600 text-white px-4 py-2 rounded-full hover:glow-purple transition font-semibold active:scale-95">
               無料で始める
             </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <div className="bg-gradient-to-b from-slate-900 via-slate-900 to-indigo-950 text-white py-28 px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-semibold px-4 py-2 rounded-full mb-8">
-            <span>✨</span>
-            <span>個人開発者のためのコミュニティ</span>
+      <div className="relative overflow-hidden py-28 px-4">
+        <div className="absolute inset-0 grid-overlay opacity-30" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-accent-purple/20 rounded-full blur-[120px]" />
+        <div className="relative max-w-3xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 bg-accent-purple/10 border border-accent-purple/30 text-accent-purple-light text-xs font-semibold px-4 py-2 rounded-full mb-8 font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-emerald" />
+            個人開発者のためのコミュニティ
           </div>
           <h1 className="text-5xl sm:text-6xl font-black tracking-tight mb-6 leading-tight">
             個人開発の進捗を、<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent-purple-light via-accent-purple to-accent-cyan">
               シェアしよう。
             </span>
           </h1>
@@ -60,250 +58,232 @@ function LandingPage() {
             毎日のアウトプットが、あなたの成長を証明する。
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              href="/signup"
-              className="bg-indigo-600 text-white px-8 py-3.5 rounded-2xl text-base font-bold hover:bg-indigo-500 transition shadow-xl shadow-indigo-500/30"
-            >
+            <Link href="/signup"
+              className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 py-3.5 rounded-full text-base font-bold hover:glow-purple transition active:scale-95">
               無料で始める →
             </Link>
-            <Link
-              href="/login"
-              className="bg-slate-800 text-slate-300 px-8 py-3.5 rounded-2xl text-base font-semibold hover:bg-slate-700 transition border border-slate-700"
-            >
+            <Link href="/login"
+              className="bg-dark-elevated text-slate-300 px-8 py-3.5 rounded-full text-base font-semibold hover:bg-dark-hover transition border border-dark-border active:scale-95">
               ログインする
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Features */}
-      <div className="max-w-5xl mx-auto px-4 py-24">
-        <h2 className="text-3xl font-black text-slate-800 text-center mb-14">
-          開発者のための、開発者による
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="max-w-5xl mx-auto px-4 py-20">
+        <h2 className="text-3xl font-black text-center mb-14">開発者のための、開発者による</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[
             { icon: '📊', title: '進捗を可視化', desc: 'プロジェクトの進捗をバーで表現。毎日の積み重ねが一目でわかる。' },
-            { icon: '👊', title: 'リスペクトで応援', desc: '仲間の頑張りを👊で応援しよう。あなたのリスペクトが誰かのモチベーションになる。' },
-            { icon: '🏷️', title: 'カテゴリで整理', desc: 'Web / アプリ / ゲーム / AI/ML。自分のジャンルで投稿を整理・発見できる。' },
+            { icon: '🔥', title: 'リアクションで応援', desc: '仲間の頑張りに👍🔥💡で応援。あなたのリアクションが誰かのモチベーションに。' },
+            { icon: '🏷️', title: '技術スタックで整理', desc: 'React / Python / Rust。使った技術タグで投稿を整理・発見できる。' },
           ].map((f) => (
-            <div key={f.title} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center hover:shadow-md transition-shadow">
+            <div key={f.title}
+              className="card-glow bg-gradient-to-br from-dark-surface to-dark-elevated rounded-2xl border border-dark-border/60 p-8 text-center transition-all duration-200">
               <div className="text-4xl mb-4">{f.icon}</div>
-              <h3 className="text-lg font-bold text-slate-800 mb-2">{f.title}</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">{f.desc}</p>
+              <h3 className="text-lg font-bold text-white mb-2">{f.title}</h3>
+              <p className="text-sm text-slate-400 leading-relaxed">{f.desc}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* CTA */}
-      <div className="bg-slate-900 py-20 px-4">
+      <div className="py-20 px-4 border-t border-dark-border/50">
         <div className="max-w-xl mx-auto text-center">
-          <h2 className="text-3xl font-black text-white mb-4">今日から始めよう</h2>
+          <h2 className="text-3xl font-black mb-4">今日から始めよう</h2>
           <p className="text-slate-400 text-base mb-8">アカウント登録は無料。30秒でスタートできる。</p>
-          <Link href="/signup" className="inline-block bg-indigo-600 text-white px-10 py-4 rounded-2xl text-lg font-bold hover:bg-indigo-500 transition shadow-xl shadow-indigo-500/30">
+          <Link href="/signup"
+            className="inline-block bg-gradient-to-r from-violet-600 to-purple-600 text-white px-10 py-4 rounded-full text-lg font-bold hover:glow-purple transition active:scale-95">
             無料で始める →
           </Link>
         </div>
       </div>
 
-      <footer className="bg-slate-950 py-8 px-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-slate-600 font-black">{'</>'}</span>
-            <span className="text-slate-600 font-bold text-sm">DevHub</span>
+      <footer className="border-t border-dark-border/50 py-8 px-4">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-600">
+          <span className="font-bold text-sm">
+            <span className="text-accent-purple">D</span>evHub
+          </span>
+          <div className="flex items-center gap-6 text-xs">
+            <Link href="/terms" className="hover:text-slate-400 transition">利用規約</Link>
+            <Link href="/privacy" className="hover:text-slate-400 transition">プライバシーポリシー</Link>
+            <span className="font-mono">© 2026 DevHub</span>
           </div>
-          <p className="text-slate-700 text-xs">© 2025 DevHub. All rights reserved.</p>
         </div>
       </footer>
     </div>
   )
 }
 
-// ── Feed page for authenticated users ────────────────────────────────────────
 export default async function FeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; sort?: string; page?: string }>
+  searchParams: Promise<{ category?: string; sort?: string }>
 }) {
-  const { category: activeCategory, sort, page: pageStr } = await searchParams
-  const page = Math.max(1, Number(pageStr ?? 1))
+  const { category: activeCategory, sort } = await searchParams
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return <LandingPage />
 
-  // For respect/trend sorts we skip pagination and sort in JS
-  const usePagination = !sort || sort === 'new'
-  const offset = usePagination ? (page - 1) * FEED_LIMIT : 0
+  const isFollowingTab = sort === 'following'
+  const useInfiniteScroll = !sort || sort === 'new' || sort === 'following'
 
-  let query = supabase
-    .from('posts')
-    .select('id, content, author_name, user_id, created_at, progress, category, respects(count)')
+  const POST_SELECT =
+    'id, content, author_name, user_id, created_at, progress, category, github_url, demo_url, pinned, is_public, view_count, image_url, tech_stack, quoted_post_id, quoted_post:quoted_post_id(id,content,author_name,user_id), respects(count), comments(count)'
 
-  if (activeCategory) query = query.eq('category', activeCategory)
-  if (sort === 'trend') {
-    const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
-    query = query.gte('created_at', since)
-  }
+  let rawPosts: Post[] = []
+  let noFollowsYet = false
 
-  query = query.order('created_at', { ascending: false })
-
-  if (usePagination) {
-    query = query.range(offset, offset + FEED_LIMIT - 1)
+  if (isFollowingTab) {
+    const { data: followData } = await supabase
+      .from('follows').select('following_id').eq('follower_id', user.id)
+    const followingIds = (followData ?? []).map((f) => f.following_id)
+    if (followingIds.length === 0) {
+      noFollowsYet = true
+    } else {
+      const { data } = await supabase
+        .from('posts').select(POST_SELECT)
+        .in('user_id', followingIds)
+        .order('created_at', { ascending: false })
+        .range(0, FEED_LIMIT - 1)
+      rawPosts = (data ?? []) as unknown as Post[]
+    }
   } else {
-    query = query.limit(50)
+    let query = supabase.from('posts').select(POST_SELECT)
+      .or(`is_public.eq.true,user_id.eq.${user.id}`)
+    if (activeCategory) query = query.eq('category', activeCategory)
+    if (sort === 'trend') {
+      const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+      query = query.gte('created_at', since)
+    }
+    query = query.order('created_at', { ascending: false })
+    if (useInfiniteScroll) {
+      query = query.range(0, FEED_LIMIT - 1)
+    } else {
+      query = query.limit(50)
+    }
+    const { data } = await query
+    rawPosts = (data ?? []) as unknown as Post[]
   }
 
-  const [{ data: rawPosts }, { data: myRespects }] = await Promise.all([
-    query,
-    supabase.from('respects').select('post_id').eq('user_id', user.id),
-  ])
-
-  let posts: Post[] = (rawPosts ?? []) as Post[]
+  // Sort client-side for respect/trend modes
   if (sort === 'respect' || sort === 'trend') {
-    posts = [...posts].sort(
+    rawPosts = [...rawPosts].sort(
       (a, b) => (b.respects?.[0]?.count ?? 0) - (a.respects?.[0]?.count ?? 0)
     )
   }
 
+  const postIds = rawPosts.map((p) => p.id)
+
+  const [{ data: myRespects }, { data: myBookmarks }, { count: unreadNotifs }, { data: announcement }, { data: reactionData }] = await Promise.all([
+    postIds.length > 0
+      ? supabase.from('respects').select('post_id').eq('user_id', user.id).in('post_id', postIds)
+      : Promise.resolve({ data: [] }),
+    postIds.length > 0
+      ? supabase.from('bookmarks').select('post_id').eq('user_id', user.id).in('post_id', postIds)
+      : Promise.resolve({ data: [] }),
+    supabase.from('notifications').select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id).eq('read', false),
+    supabase.from('announcements').select('content').eq('active', true)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    postIds.length > 0
+      ? supabase.from('reactions').select('post_id, emoji, user_id').in('post_id', postIds)
+      : Promise.resolve({ data: [] }),
+  ])
+  const notifCount = unreadNotifs ?? 0
+
   const respectedPostIds = new Set((myRespects ?? []).map((r) => r.post_id))
-  const displayName = user.user_metadata?.display_name ?? user.email ?? ''
-  const hasMore = usePagination && posts.length === FEED_LIMIT
+  const bookmarkedPostIds = new Set((myBookmarks ?? []).map((b) => b.post_id))
+
+  const reactionsByPost: Record<string, ReactionData[]> = {}
+  for (const r of reactionData ?? []) {
+    if (!reactionsByPost[r.post_id]) reactionsByPost[r.post_id] = []
+    const existing = reactionsByPost[r.post_id].find((x) => x.emoji === r.emoji)
+    if (existing) {
+      existing.count++
+      if (r.user_id === user.id) existing.reactedByMe = true
+    } else {
+      reactionsByPost[r.post_id].push({ emoji: r.emoji, count: 1, reactedByMe: r.user_id === user.id })
+    }
+  }
+
+  const postsWithReactions: PostWithReactions[] = rawPosts.map((p) => ({
+    ...p,
+    initialReactions: reactionsByPost[p.id] ?? [],
+  }))
+
+  const hasMore = useInfiniteScroll && rawPosts.length === FEED_LIMIT
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-slate-900 sticky top-0 z-10">
-        {/* Brand + user nav */}
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-7 h-7 bg-indigo-500 rounded-lg flex items-center justify-center shadow-sm shadow-indigo-500/40 group-hover:bg-indigo-400 transition">
-              <span className="text-white font-black text-xs">{'</>'}</span>
-            </div>
-            <span className="text-lg font-black text-white tracking-tight">DevHub</span>
-          </Link>
-          <div className="flex items-center gap-1">
-            <Link
-              href="/search"
-              className="text-slate-400 hover:text-white transition p-1.5 rounded-lg hover:bg-slate-800"
-              aria-label="検索"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-              </svg>
-            </Link>
-            <Link
-              href="/profile"
-              className="flex items-center gap-2 text-slate-300 hover:text-white transition px-2 py-1.5 rounded-lg hover:bg-slate-800"
-            >
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                {displayName[0]?.toUpperCase() ?? '?'}
-              </div>
-              <span className="text-sm hidden sm:block">{displayName}</span>
-            </Link>
-            <form action={signOut}>
-              <button type="submit" className="text-xs text-slate-400 hover:text-white transition px-3 py-1.5 rounded-lg hover:bg-slate-800">
-                ログアウト
-              </button>
-            </form>
-          </div>
+    <AppShell currentUserId={user.id} notifCount={notifCount}>
+      {announcement?.content && (
+        <div className="mb-4">
+          <AnnouncementBanner message={announcement.content} />
         </div>
+      )}
 
+      {/* Sort tabs */}
+      <div className="sticky top-0 z-20 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 mb-4 bg-dark-bg/80 backdrop-blur-xl border-b border-dark-border/50">
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+          {([
+            { key: undefined, label: '新着' },
+            { key: 'respect', label: '人気' },
+            { key: 'trend', label: 'トレンド' },
+            { key: 'following', label: 'フォロー中' },
+          ] as { key: string | undefined; label: string }[]).map(({ key, label }) => (
+            <Link key={label} href={buildUrl({ sort: key, category: activeCategory })}
+              className={`shrink-0 text-sm px-4 py-1.5 rounded-full transition font-medium ${
+                sort === key
+                  ? 'bg-accent-purple/20 text-accent-purple-light border border-accent-purple/30'
+                  : 'text-slate-500 hover:text-slate-300 hover:bg-dark-hover'
+              }`}>
+              {label}
+            </Link>
+          ))}
+        </div>
         {/* Category filter */}
-        <div className="max-w-2xl mx-auto px-4 pb-2.5 flex gap-1.5 overflow-x-auto scrollbar-hide">
-          <Link
-            href={buildUrl({ sort, category: undefined })}
-            className={`shrink-0 text-xs px-3 py-1.5 rounded-full transition font-medium
-              ${!activeCategory ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-          >
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide mt-2">
+          <Link href={buildUrl({ sort, category: undefined })}
+            className={`shrink-0 text-xs px-3 py-1 rounded-full transition font-medium ${
+              !activeCategory ? 'bg-dark-elevated text-white border border-dark-border' : 'text-slate-500 hover:text-slate-300'
+            }`}>
             すべて
           </Link>
-          {CATEGORIES.map((cat) => {
-            const active = activeCategory === cat
-            return (
-              <Link
-                key={cat}
-                href={active ? buildUrl({ sort, category: undefined }) : buildUrl({ sort, category: cat })}
-                className={`shrink-0 text-xs px-3 py-1.5 rounded-full transition font-medium
-                  ${active ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-              >
-                {cat}
-              </Link>
-            )
-          })}
+          {CATEGORIES.map((cat) => (
+            <Link key={cat}
+              href={activeCategory === cat ? buildUrl({ sort, category: undefined }) : buildUrl({ sort, category: cat })}
+              className={`shrink-0 text-xs px-3 py-1 rounded-full transition font-medium ${
+                activeCategory === cat ? 'bg-dark-elevated text-white border border-dark-border' : 'text-slate-500 hover:text-slate-300'
+              }`}>
+              # {cat}
+            </Link>
+          ))}
         </div>
+      </div>
 
-        {/* Sort tabs */}
-        <div className="max-w-2xl mx-auto px-4 pb-2.5 flex gap-0.5 border-t border-slate-800/60 pt-2">
-          {(
-            [
-              { key: undefined, label: '新着' },
-              { key: 'respect', label: '人気' },
-              { key: 'trend', label: 'トレンド（48h）' },
-            ] as { key: string | undefined; label: string }[]
-          ).map(({ key, label }) => {
-            const active = sort === key
-            return (
-              <Link
-                key={label}
-                href={buildUrl({ sort: key, category: activeCategory })}
-                className={`text-xs px-3 py-1 rounded-full transition font-medium
-                  ${active ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`}
-              >
-                {label}
-              </Link>
-            )
-          })}
-        </div>
-      </header>
+      <RealtimeFeed />
 
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-        {page === 1 && <PostForm />}
+      <PostForm />
 
-        {posts.length > 0 ? (
-          <>
-            {posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                respected={respectedPostIds.has(post.id)}
-                currentUserId={user.id}
-              />
-            ))}
-
-            {/* Pagination */}
-            <div className="flex items-center justify-between pt-2">
-              {page > 1 ? (
-                <Link
-                  href={buildUrl({ sort, category: activeCategory, page: page - 1 })}
-                  className="text-sm text-slate-500 hover:text-slate-700 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition"
-                >
-                  ← 前へ
-                </Link>
-              ) : (
-                <div />
-              )}
-              {hasMore && (
-                <Link
-                  href={buildUrl({ sort, category: activeCategory, page: page + 1 })}
-                  className="text-sm text-slate-600 hover:text-slate-800 px-6 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition font-medium"
-                >
-                  もっと見る →
-                </Link>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="text-center text-slate-400 text-sm py-16 bg-white rounded-2xl border border-slate-100">
-            {activeCategory
-              ? `「${activeCategory}」の投稿はまだありません`
-              : sort === 'trend'
-              ? '過去48時間にトレンドの投稿がありません'
-              : 'まだ投稿がありません。最初の進捗を共有しましょう！'}
-          </div>
-        )}
-      </main>
-    </div>
+      {noFollowsYet ? (
+        <EmptyState
+          icon="users"
+          title="まだ誰もフォローしていません"
+          description="投稿者名をクリックしてプロフィールを開き、気になる開発者をフォローしましょう"
+        />
+      ) : (
+        <InfiniteScrollFeed
+          initialPosts={postsWithReactions}
+          initialRespectedIds={[...respectedPostIds]}
+          initialBookmarkedIds={[...bookmarkedPostIds]}
+          currentUserId={user.id}
+          sort={sort}
+          category={activeCategory}
+          hasMore={hasMore}
+        />
+      )}
+    </AppShell>
   )
 }

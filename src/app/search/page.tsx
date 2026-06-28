@@ -1,9 +1,16 @@
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import PostCard, { type Post } from '@/app/ui/PostCard'
+import PostCard from '@/app/ui/PostCard'
+import AppShell from '@/app/ui/shell/AppShell'
+import PageHeader from '@/app/ui/shell/PageHeader'
+import EmptyState from '@/app/ui/EmptyState'
+import { SearchIcon } from '@/app/ui/icons'
+import type { Post } from '@/lib/types'
 
 export const metadata = { title: '検索' }
+
+const POST_SELECT =
+  'id, content, author_name, user_id, created_at, progress, category, github_url, demo_url, pinned, is_public, view_count, image_url, tech_stack, quoted_post_id, quoted_post:quoted_post_id(id,content,author_name,user_id), respects(count), comments(count)'
 
 export default async function SearchPage({
   searchParams,
@@ -15,85 +22,69 @@ export default async function SearchPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/')
 
-  const displayName = user.user_metadata?.display_name ?? user.email ?? ''
   const trimmed = q?.trim() ?? ''
 
   let posts: Post[] = []
   let myRespectedIds = new Set<string>()
+  let myBookmarkedIds = new Set<string>()
+
+  const { count: unreadNotifs } = await supabase
+    .from('notifications').select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id).eq('read', false)
 
   if (trimmed) {
-    const [{ data: results }, { data: myRespects }] = await Promise.all([
+    const [{ data: results }, { data: myRespects }, { data: myBookmarks }] = await Promise.all([
       supabase
         .from('posts')
-        .select('id, content, author_name, user_id, created_at, progress, category, respects(count)')
+        .select(POST_SELECT)
         .or(`content.ilike.%${trimmed}%,author_name.ilike.%${trimmed}%`)
+        .or(`is_public.eq.true,user_id.eq.${user.id}`)
         .order('created_at', { ascending: false })
         .limit(30),
       supabase.from('respects').select('post_id').eq('user_id', user.id),
+      supabase.from('bookmarks').select('post_id').eq('user_id', user.id),
     ])
-    posts = (results ?? []) as Post[]
+    posts = (results ?? []) as unknown as Post[]
     myRespectedIds = new Set((myRespects ?? []).map((r) => r.post_id))
+    myBookmarkedIds = new Set((myBookmarks ?? []).map((b) => b.post_id))
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-slate-900 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2 group shrink-0">
-            <div className="w-7 h-7 bg-indigo-500 rounded-lg flex items-center justify-center shadow-sm shadow-indigo-500/40 group-hover:bg-indigo-400 transition">
-              <span className="text-white font-black text-xs">{'</>'}</span>
-            </div>
-            <span className="text-lg font-black text-white tracking-tight hidden sm:block">DevHub</span>
-          </Link>
+    <AppShell currentUserId={user.id} notifCount={unreadNotifs ?? 0} showRightSidebar={false}>
+      <PageHeader title="探す" backHref="/" />
 
-          {/* Search bar in header */}
-          <form action="/search" method="get" className="flex-1">
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder="投稿・ユーザーを検索..."
-              autoFocus
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+      <form action="/search" method="get" className="relative mb-5">
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
+          <SearchIcon size={18} />
+        </span>
+        <input
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder="投稿・ユーザーを検索..."
+          autoFocus
+          className="w-full bg-dark-elevated rounded-full pl-12 pr-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 border border-transparent focus:outline-none focus:border-accent-purple/50 focus:ring-1 focus:ring-accent-purple/40 transition"
+        />
+      </form>
+
+      {!trimmed ? (
+        <EmptyState icon="rocket" title="キーワードを入力して検索" description="投稿の内容やユーザー名で検索できます" />
+      ) : posts.length > 0 ? (
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500 px-1 font-mono">「{trimmed}」の検索結果 — {posts.length}件</p>
+          {posts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              respected={myRespectedIds.has(post.id)}
+              bookmarked={myBookmarkedIds.has(post.id)}
+              currentUserId={user.id}
             />
-          </form>
-
-          <Link
-            href="/profile"
-            className="shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-sm"
-          >
-            {displayName[0]?.toUpperCase() ?? '?'}
-          </Link>
+          ))}
         </div>
-      </header>
-
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-        {!trimmed ? (
-          <div className="text-center text-slate-400 text-sm py-16 bg-white rounded-2xl border border-slate-100">
-            <div className="text-3xl mb-3">🔍</div>
-            キーワードを入力して検索してください
-          </div>
-        ) : posts.length > 0 ? (
-          <>
-            <p className="text-xs text-slate-500 px-1">
-              「{trimmed}」の検索結果 — {posts.length}件
-            </p>
-            {posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                respected={myRespectedIds.has(post.id)}
-                currentUserId={user.id}
-              />
-            ))}
-          </>
-        ) : (
-          <div className="text-center text-slate-400 text-sm py-16 bg-white rounded-2xl border border-slate-100">
-            「{trimmed}」に一致する投稿が見つかりませんでした
-          </div>
-        )}
-      </main>
-    </div>
+      ) : (
+        <EmptyState icon="rocket" title="見つかりませんでした" description={`「${trimmed}」に一致する投稿はありません`} />
+      )}
+    </AppShell>
   )
 }
