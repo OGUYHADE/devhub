@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
-import { HomeIcon, SearchIcon, BellIcon, GlobeIcon, UserIcon } from '../icons'
+import { HomeIcon, SearchIcon, BellIcon, GlobeIcon, UserIcon, NewspaperIcon } from '../icons'
 
 export default function BottomNav({ notifCount = 0 }: { notifCount?: number }) {
   const pathname = usePathname()
@@ -12,6 +12,7 @@ export default function BottomNav({ notifCount = 0 }: { notifCount?: number }) {
     { href: '/', label: 'ホーム', Icon: HomeIcon },
     { href: '/search', label: '探す', Icon: SearchIcon },
     { href: '/notifications', label: '通知', Icon: BellIcon, badge: notifCount },
+    { href: '/news', label: 'ニュース', Icon: NewspaperIcon },
     { href: '/plaza', label: '広場', Icon: GlobeIcon },
     { href: '/profile', label: 'プロフィール', Icon: UserIcon },
   ]

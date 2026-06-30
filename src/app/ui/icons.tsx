@@ -67,6 +67,13 @@ export const PlusIcon = (p: IconProps) => (
     <path d="M12 5v14M5 12h14" />
   </svg>
 )
+export const NewspaperIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4 4h13a1 1 0 0 1 1 1v14a2 2 0 0 0 2-2V8h-3" />
+    <path d="M18 19a2 2 0 0 1-2-2V5a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1z" />
+    <path d="M7 8h7M7 12h7M7 16h4" />
+  </svg>
+)
 export const CommentIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />

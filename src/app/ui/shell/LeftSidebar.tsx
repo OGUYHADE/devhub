@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import clsx from 'clsx'
 import {
   HomeIcon, SearchIcon, BellIcon, BookmarkIcon, LayoutIcon,
-  GlobeIcon, UserIcon, SettingsIcon, PlusIcon,
+  GlobeIcon, UserIcon, SettingsIcon, PlusIcon, NewspaperIcon,
 } from '../icons'
 
 type NavItem = {
@@ -24,6 +24,7 @@ export default function LeftSidebar({ notifCount = 0 }: { notifCount?: number })
     { href: '/notifications', label: '通知', Icon: BellIcon, badge: notifCount },
     { href: '/bookmarks', label: 'ブックマーク', Icon: BookmarkIcon },
     { href: '/board', label: '掲示板', Icon: LayoutIcon },
+    { href: '/news', label: 'ニュース', Icon: NewspaperIcon },
     { href: '/plaza', label: 'みんなの広場', Icon: GlobeIcon },
     { href: '/profile', label: 'プロフィール', Icon: UserIcon },
     { href: '/settings', label: '設定', Icon: SettingsIcon },
